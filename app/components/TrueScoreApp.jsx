@@ -70,7 +70,7 @@ function buildMockResult(companyName) {
   return {
     company_name: companyName,
     trust_score: trust,
-    trust_score_label: trust>=7.5?"Alta affidabilità":trust>=5.5?"Affidabilità moderata":trust>=3.5?"Bassa affidabilità":"Molto bassa affidabilità",
+    trust_score_label: trust<0?"Dati insufficienti per una valutazione":trust>=7.5?"Alta affidabilità":trust>=5.5?"Affidabilità moderata":trust>=3.5?"Bassa affidabilità":"Molto bassa affidabilità",
     verdicts,
     red_flags:    verdicts.filter(v=>v.verdict==="discrepancy").map(v=>v.id),
     warnings:     verdicts.filter(v=>v.verdict==="warning").map(v=>v.id),
@@ -232,8 +232,8 @@ function ClaimCard({ v }) {
 
 function TrustMeter({ score }) {
   const [width, setWidth] = useState(0);
-  useEffect(()=>{ setTimeout(()=>setWidth((score/10)*100), 100); },[score]);
-  const color = score<4?T.red:score<6.5?T.orange:T.green;
+  useEffect(()=>{ setTimeout(()=>setWidth(score<0?0:(score/10)*100), 100); },[score]);
+  const color = score<0?T.grey:score<4?T.red:score<6.5?T.orange:T.green;
   return (
     <div>
       <div style={{height:8,background:T.navyBorder,borderRadius:4,overflow:"hidden",marginBottom:6}}>
@@ -392,7 +392,7 @@ function AnalyzingScreen({ companyName, steps }) {
 function ReportScreen({ result, jobId, onReset }) {
   const [tab, setTab] = useState("claims");
   const score    = result.trust_score;
-  const scoreC   = score<4?T.red:score<6.5?T.orange:T.green;
+  const scoreC   = score<0?T.grey:score<4?T.red:score<6.5?T.orange:T.green;
   const verdicts = result.verdicts || [];
   const redFlags = verdicts.filter(v=>result.red_flags?.includes(v.id));
   const hasApi   = jobId && !USE_MOCK;
@@ -413,7 +413,7 @@ function ReportScreen({ result, jobId, onReset }) {
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <div style={{textAlign:"right"}}>
             <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,letterSpacing:"0.06em"}}>TRUST SCORE  </span>
-            <span style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:scoreC}}>{score.toFixed(1)}</span>
+            <span style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:scoreC}}>{score<0?"N/D":score.toFixed(1)}</span>
             <span style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey}}>/10</span>
           </div>
           {hasApi && (
@@ -440,7 +440,7 @@ function ReportScreen({ result, jobId, onReset }) {
               </div>
             </div>
             <div style={{textAlign:"right",flexShrink:0,marginLeft:20}}>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:52,fontWeight:700,color:scoreC,lineHeight:1}}>{score.toFixed(1)}</div>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:52,fontWeight:700,color:scoreC,lineHeight:1}}>{score<0?"N/D":score.toFixed(1)}</div>
               <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey,marginTop:2}}>{result.trust_score_label}</div>
             </div>
           </div>
