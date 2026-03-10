@@ -215,8 +215,27 @@ function ClaimCard({ v }) {
           </div>
           <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:11.5,color:T.whiteDim,lineHeight:1.7,background:T.navyMid,borderRadius:5,padding:"10px 12px",border:`1px solid ${T.navyBorder}`}}>{v.reasoning}</div>
           {v.sources?.length>0 && (
-            <div style={{marginTop:8,display:"flex",gap:6,flexWrap:"wrap"}}>
-              {v.sources.map(s=><span key={s} style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.accent,background:`${T.accent}15`,padding:"2px 8px",borderRadius:20,letterSpacing:"0.04em"}}>{s}</span>)}
+            <div style={{marginTop:10}}>
+              <div style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,letterSpacing:"0.1em",marginBottom:5}}>FONTI CON DATI</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {v.sources.map(s=><span key={s} style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.green,background:`${T.green}15`,padding:"2px 8px",borderRadius:20,letterSpacing:"0.04em"}}>✓ {s}</span>)}
+              </div>
+            </div>
+          )}
+          {(!v.sources || v.sources.length===0) && v.sources_consulted?.length>0 && (
+            <div style={{marginTop:10}}>
+              <div style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,letterSpacing:"0.1em",marginBottom:5}}>FONTI CONSULTATE — NESSUN RISULTATO</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {v.sources_consulted.map(s=><span key={s} style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey,background:T.greyLight,padding:"2px 8px",borderRadius:20,letterSpacing:"0.04em",textDecoration:"line-through",opacity:0.7}}>✕ {s}</span>)}
+              </div>
+            </div>
+          )}
+          {v.sources?.length>0 && v.sources_consulted?.filter(s=>!v.sources.includes(s)).length>0 && (
+            <div style={{marginTop:6}}>
+              <div style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,letterSpacing:"0.1em",marginBottom:5}}>FONTI SENZA RISULTATI</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {v.sources_consulted.filter(s=>!v.sources.includes(s)).map(s=><span key={s} style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey,background:T.greyLight,padding:"2px 8px",borderRadius:20,letterSpacing:"0.04em",opacity:0.6}}>✕ {s}</span>)}
+              </div>
             </div>
           )}
           {v.flags?.length>0 && (
