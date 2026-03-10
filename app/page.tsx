@@ -1,5 +1,5 @@
 "use client";
-import TrueScoreApp from "../components/TrueScoreApp";
+import TrueScoreApp from "./components/TrueScoreApp";
 
 export default function Page() {
   return (
