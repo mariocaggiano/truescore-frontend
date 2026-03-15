@@ -82,13 +82,15 @@ function buildMockResult(companyName) {
 }
 
 // ── API calls ──────────────────────────────────────────────────────────────────
-async function apiAnalyze({ companyName, pitchText, bilancioText, websiteUrl, sector, pitchFile, bilancioFile }) {
+async function apiAnalyze({ companyName, pitchText, bilancioText, websiteUrl, sector, pitchFile, bilancioFile, linkedinUrl, vatNumber }) {
   const form = new FormData();
   form.append("company_name", companyName);
   if (pitchText)    form.append("pitch_text", pitchText);
   if (bilancioText) form.append("bilancio_text", bilancioText);
   if (websiteUrl)   form.append("website_url", websiteUrl);
   if (sector)       form.append("sector", sector);
+  if (linkedinUrl)  form.append("linkedin_url", linkedinUrl);
+  if (vatNumber)    form.append("vat_number", vatNumber);
   if (pitchFile)    form.append("pitch_file", pitchFile);
   if (bilancioFile) form.append("bilancio_file", bilancioFile);
 
@@ -275,6 +277,8 @@ function UploadScreen({ onSubmit }) {
   const [bilancioText, setBilancioText]= useState("");
   const [websiteUrl,   setWebsiteUrl]  = useState("");
   const [sector,       setSector]      = useState("");
+  const [linkedinUrl,  setLinkedinUrl] = useState("");
+  const [vatNumber,    setVatNumber]   = useState("");
 
   const canSubmit = companyName.trim().length > 0;
 
@@ -367,8 +371,20 @@ function UploadScreen({ onSubmit }) {
             </div>
           )}
 
+          {/* LinkedIn + Partita IVA */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div>
+              {label("Profilo LinkedIn", true)}
+              {input(linkedinUrl,setLinkedinUrl,"https://linkedin.com/company/...",true)}
+            </div>
+            <div>
+              {label("Partita IVA", true)}
+              {input(vatNumber,setVatNumber,"es. 12345678901",true)}
+            </div>
+          </div>
+
           {/* CTA */}
-          <button onClick={()=>onSubmit({companyName,pitchText,bilancioText,websiteUrl,sector,pitchFile,bilancioFile})}
+          <button onClick={()=>onSubmit({companyName,pitchText,bilancioText,websiteUrl,sector,pitchFile,bilancioFile,linkedinUrl,vatNumber})}
             disabled={!canSubmit}
             style={{marginTop:4,padding:"14px 24px",background:canSubmit?T.accent:T.navyBorder,border:"none",borderRadius:6,cursor:canSubmit?"pointer":"not-allowed",color:"white",fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:600,letterSpacing:"0.02em",transition:"all 0.2s",boxShadow:canSubmit?`0 0 24px ${T.accent}40`:"none"}}>
             Avvia Analisi →
