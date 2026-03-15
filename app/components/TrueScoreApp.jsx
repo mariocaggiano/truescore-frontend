@@ -82,7 +82,49 @@ function buildMockResult(companyName) {
 }
 
 // ── API calls ──────────────────────────────────────────────────────────────────
-async function apiAnalyze({ companyName, pitchText, bilancioText, websiteUrl, sector, pitchFile, bilancioFile, linkedinUrl, vatNumber }) {
+// ── Client-side pre-fetch via proxy ──────────────────────────────────────
+// Il backend fa il fetch passando l'IP reale del browser come X-Forwarded-For.
+// Molti siti italiani non bloccano IP residenziali — solo i datacenter.
+
+async function proxyFetch(url) {
+  try {
+    const resp = await fetch(
+      `${API_BASE}/api/proxy-fetch?url=${encodeURIComponent(url)}`,
+      { method: "GET" }
+    );
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data.status === 200 ? { html: data.html, finalUrl: data.final_url } : null;
+  } catch {
+    return null;
+  }
+}
+
+async function prefetchExternalData(companyName, vatNumber) {
+  const results = { ufficiocamerale: null, opencorporates: null };
+  const fetches = [];
+
+  // Fetch paralleli per velocità
+  if (vatNumber) {
+    fetches.push(
+      proxyFetch(`https://www.ufficiocamerale.it/trova-azienda?piva=${encodeURIComponent(vatNumber)}`)
+        .then(r => { if (r) results.ufficiocamerale = r; })
+        .catch(() => {})
+    );
+  }
+
+  const ocQuery = encodeURIComponent(companyName + " srl");
+  fetches.push(
+    proxyFetch(`https://opencorporates.com/companies?q=${ocQuery}&jurisdiction_code=it&type=company`)
+      .then(r => { if (r) results.opencorporates = r; })
+      .catch(() => {})
+  );
+
+  await Promise.all(fetches);
+  return results;
+}
+
+async function apiAnalyze({ companyName, pitchText, bilancioText, websiteUrl, sector, pitchFile, bilancioFile, linkedinUrl, vatNumber, prefetchedData }) {
   const form = new FormData();
   form.append("company_name", companyName);
   if (pitchText)    form.append("pitch_text", pitchText);
@@ -93,6 +135,14 @@ async function apiAnalyze({ companyName, pitchText, bilancioText, websiteUrl, se
   if (vatNumber)    form.append("vat_number", vatNumber);
   if (pitchFile)    form.append("pitch_file", pitchFile);
   if (bilancioFile) form.append("bilancio_file", bilancioFile);
+
+  // Dati pre-fetchati dal browser (HTML di siti terzi)
+  if (prefetchedData?.ufficiocamerale?.html)
+    form.append("ufficiocamerale_html", prefetchedData.ufficiocamerale.html);
+  if (prefetchedData?.ufficiocamerale?.finalUrl)
+    form.append("ufficiocamerale_url", prefetchedData.ufficiocamerale.finalUrl);
+  if (prefetchedData?.opencorporates?.html)
+    form.append("opencorporates_html", prefetchedData.opencorporates.html);
 
   const res = await fetch(`${API_BASE}/api/analyze`, { method:"POST", body:form });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -602,6 +652,14 @@ export default function TrueScoreApp() {
 
   // ── Real API pipeline ───────────────────────────────────────────────────────
   const runReal = async (payload) => {
+    // Pre-fetch dati da siti terzi con l'IP reale del browser
+    updStep(0, {status:"running", detail:"Recupero dati da fonti esterne..."});
+    const prefetchedData = await prefetchExternalData(
+      payload.companyName,
+      payload.vatNumber || ""
+    );
+    payload = { ...payload, prefetchedData };
+
     const { job_id } = await apiAnalyze(payload);
     setJobId(job_id);
 
