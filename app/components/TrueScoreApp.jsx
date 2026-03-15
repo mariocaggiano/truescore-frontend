@@ -614,7 +614,7 @@ export default function TrueScoreApp() {
       if (data.status === "closed" || data.status === "done") {
         es.close();
         const res = await apiResult(job_id);
-        setResult(res);
+        setResult({...res, legal_status: res.legal_status||null});
         setScreen("report");
         return;
       }
