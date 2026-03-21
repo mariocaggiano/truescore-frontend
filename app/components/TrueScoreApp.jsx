@@ -575,10 +575,107 @@ function ReportScreen({ result, jobId, onReset }) {
 
         {/* Tabs */}
         <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.navyBorder}`,marginBottom:18}}>
-          {[["claims",`Claim (${verdicts.length})`],["redflags",`Red Flags (${redFlags.length})`],["news",`News ${result.news_flags?.high_count>0?"🔴":result.news_flags?.total>0?"🟡":""}`.trim()],["people","Persone Chiave"],["legal","Stato Legale"],["sources","Fonti & Disclaimer"]].map(([id,lbl])=>(
+          {[["insights","Insights"],["claims",`Claim (${verdicts.length})`],["redflags",`Red Flags (${redFlags.length})`],["news",`News ${result.news_flags?.high_count>0?"🔴":result.news_flags?.total>0?"🟡":""}`.trim()],["people","Persone Chiave"],["legal","Stato Legale"],["sources","Fonti & Disclaimer"]].map(([id,lbl])=>(
             <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 18px",border:"none",background:"transparent",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===id?T.white:T.grey,fontFamily:"'DM Sans',sans-serif",borderBottom:tab===id?`2px solid ${T.accent}`:"2px solid transparent",marginBottom:-1,transition:"all 0.15s"}}>{lbl}</button>
           ))}
         </div>
+
+        {/* Tab: Insights */}
+        {tab === "insights" && (
+          <div style={{animation:"fadeUp 0.35s ease both",display:"flex",flexDirection:"column",gap:12}}>
+
+            {/* Web History */}
+            <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:8,padding:"16px 20px"}}>
+              <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.accent,letterSpacing:"0.12em",marginBottom:10}}>STORIA SITO WEB</div>
+              {!result.web_history?.found ? (
+                <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.grey}}>Nessun dato — inserire URL sito</div>
+              ) : (
+                <div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
+                    {[["Online dal",result.web_history.first_year||"N/D"],["Anni online",result.web_history.age_years?(result.web_history.age_years+"a"):"N/D"],["Snapshot",result.web_history.total_snapshots||0]].map(([l,v])=>(
+                      <div key={l} style={{background:T.navyLight,borderRadius:6,padding:"10px 14px"}}>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,marginBottom:4}}>{l}</div>
+                        <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:T.white}}>{String(v)}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {result.web_history.summary && <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:11.5,color:T.whiteDim}}>{result.web_history.summary}</div>}
+                  {result.web_history.wayback_url && <a href={result.web_history.wayback_url} target="_blank" rel="noopener noreferrer" style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.accent,display:"block",marginTop:6}}>Wayback Machine →</a>}
+                </div>
+              )}
+            </div>
+
+            {/* Email Domain */}
+            <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:8,padding:"16px 20px"}}>
+              <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.accent,letterSpacing:"0.12em",marginBottom:10}}>INFRASTRUTTURA EMAIL</div>
+              {!result.email_domain ? (
+                <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.grey}}>Verifica non disponibile</div>
+              ) : (
+                <div>
+                  <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
+                    {[["MX",result.email_domain.has_mx],["SPF",result.email_domain.has_spf],["DMARC",result.email_domain.has_dmarc]].map(([label,ok])=>(
+                      <div key={label} style={{background:ok?T.greenLight:T.redLight,border:`1px solid ${ok?T.green:T.red}40`,borderRadius:5,padding:"5px 12px",display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{color:ok?T.green:T.red,fontSize:11,fontWeight:700}}>{ok?"✓":"✕"}</span>
+                        <span style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:ok?T.green:T.red}}>{label}</span>
+                      </div>
+                    ))}
+                    {result.email_domain.mx_providers?.length>0 && <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:11.5,color:T.whiteDim}}>{result.email_domain.mx_providers.join(", ")}</span>}
+                  </div>
+                  <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.whiteDim}}>{result.email_domain.summary}</div>
+                  {result.email_domain.warnings?.map((w,i)=><div key={i} style={{fontFamily:"'DM Sans',sans-serif",fontSize:11,color:T.orange,marginTop:4}}>⚠ {w}</div>)}
+                </div>
+              )}
+            </div>
+
+            {/* Tech Stack */}
+            <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:8,padding:"16px 20px"}}>
+              <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.accent,letterSpacing:"0.12em",marginBottom:10}}>TECH STACK</div>
+              {!result.tech_stack?.found ? (
+                <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.grey}}>Nessuna tecnologia rilevata o URL sito non fornito</div>
+              ) : (
+                <div>
+                  {Object.entries(result.tech_stack.by_category||{}).map(([cat,techs])=>(
+                    <div key={cat} style={{marginBottom:8,display:"flex",alignItems:"flex-start",gap:8,flexWrap:"wrap"}}>
+                      <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,letterSpacing:"0.1em",minWidth:80,paddingTop:4}}>{cat.toUpperCase()}</span>
+                      <div>{techs.map(t=><span key={t} style={{fontFamily:"'DM Sans',sans-serif",fontSize:11.5,color:T.white,background:T.navyLight,border:`1px solid ${T.navyBorder}`,borderRadius:4,padding:"2px 8px",marginRight:4,display:"inline-block",marginBottom:4}}>{t}</span>)}</div>
+                    </div>
+                  ))}
+                  {result.tech_stack.maturity_signals?.length>0 && (
+                    <div style={{marginTop:8,display:"flex",gap:6,flexWrap:"wrap"}}>
+                      {result.tech_stack.maturity_signals.map((s,i)=><span key={i} style={{fontFamily:"'DM Mono',monospace",fontSize:8.5,color:T.accent,background:`${T.accent}15`,padding:"2px 10px",borderRadius:20,border:`1px solid ${T.accentDim}`}}>{s}</span>)}
+                    </div>
+                  )}
+                  {!result.tech_stack.has_ssl && <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:11,color:T.red,marginTop:8}}>⚠ Sito senza HTTPS</div>}
+                </div>
+              )}
+            </div>
+
+            {/* Job Postings */}
+            <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:8,padding:"16px 20px"}}>
+              <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.accent,letterSpacing:"0.12em",marginBottom:10}}>JOB POSTINGS LINKEDIN</div>
+              {!result.job_postings?.checked ? (
+                <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.grey}}>Inserire URL LinkedIn per abilitare</div>
+              ) : result.job_postings.count===0 ? (
+                <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.grey}}>Nessuna posizione aperta rilevata su LinkedIn</div>
+              ) : (
+                <div>
+                  <div style={{marginBottom:10}}>
+                    <span style={{fontFamily:"'Playfair Display',serif",fontSize:28,fontWeight:700,color:T.green}}>{result.job_postings.count}</span>
+                    <span style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:T.whiteDim,marginLeft:8}}>POSIZIONI APERTE</span>
+                  </div>
+                  {result.job_postings.jobs?.slice(0,6).map((j,i)=>(
+                    <div key={i} style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.whiteDim,padding:"5px 0",borderBottom:`1px solid ${T.navyBorder}`}}>
+                      <span style={{color:T.white,fontWeight:500}}>{j.title}</span>
+                      {j.location&&<span style={{marginLeft:8,fontSize:11,color:T.grey}}>{j.location}</span>}
+                    </div>
+                  ))}
+                  {result.job_postings.url && <a href={result.job_postings.url} target="_blank" rel="noopener noreferrer" style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.accent,display:"block",marginTop:8}}>Vedi su LinkedIn →</a>}
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
 
         {/* Tab: Claims */}
         {tab === "claims" && (
@@ -846,7 +943,7 @@ export default function TrueScoreApp() {
       if (data.status === "closed" || data.status === "done") {
         es.close();
         const res = await apiResult(job_id);
-        setResult({...res, legal_status: res.legal_status||null, key_people: res.key_people||null, news_flags: res.news_flags||null});
+        setResult({...res, legal_status: res.legal_status||null, key_people: res.key_people||null, news_flags: res.news_flags||null, web_history: res.web_history||null, job_postings: res.job_postings||null, email_domain: res.email_domain||null, tech_stack: res.tech_stack||null});
         setScreen("report");
         return;
       }
