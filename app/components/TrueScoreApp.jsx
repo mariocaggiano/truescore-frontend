@@ -517,6 +517,13 @@ function ReportScreen({ result, jobId, onReset }) {
           <span style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey,borderLeft:`1px solid ${T.navyBorder}`,paddingLeft:14,letterSpacing:"0.06em"}}>{result.company_name}</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
+          {result.tone_analysis?.tone_score!=null && (
+            <div style={{textAlign:"right",borderRight:`1px solid ${T.navyBorder}`,paddingRight:12}}>
+              <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,letterSpacing:"0.06em"}}>TONO  </span>
+              <span style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:result.tone_analysis.tone_score>=8?T.green:result.tone_analysis.tone_score>=6?T.orange:T.red}}>{result.tone_analysis.tone_score.toFixed(1)}</span>
+              <span style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey}}>/10</span>
+            </div>
+          )}
           <div style={{textAlign:"right"}}>
             <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,letterSpacing:"0.06em"}}>TRUST SCORE  </span>
             <span style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:scoreC}}>{score<0?"N/D":score.toFixed(1)}</span>
@@ -583,6 +590,49 @@ function ReportScreen({ result, jobId, onReset }) {
         {/* Tab: Insights */}
         {tab === "insights" && (
           <div style={{animation:"fadeUp 0.35s ease both",display:"flex",flexDirection:"column",gap:12}}>
+
+            {/* Tone Analysis */}
+            {result.tone_analysis && (
+              <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:8,padding:"16px 20px"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.accent,letterSpacing:"0.12em"}}>ANALISI TONO PITCH DECK</div>
+                  {result.tone_analysis.tone_score!=null && (
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{fontFamily:"'Playfair Display',serif",fontSize:22,fontWeight:700,color:result.tone_analysis.tone_score>=8?T.green:result.tone_analysis.tone_score>=6?T.orange:T.red}}>{result.tone_analysis.tone_score.toFixed(1)}</span>
+                      <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey}}>/10</span>
+                      <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:11,color:T.whiteDim}}>{result.tone_analysis.tone_label}</span>
+                    </div>
+                  )}
+                </div>
+                {result.tone_analysis.total===0 ? (
+                  <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.green}}>✓ Nessun segnale di linguaggio inflazionato rilevato</div>
+                ) : (
+                  <div>
+                    <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
+                      {[["Alta gravità",result.tone_analysis.high_count,T.red],["Media",result.tone_analysis.med_count,T.orange],["Bassa",result.tone_analysis.low_count,T.grey]].filter(([,n])=>n>0).map(([l,n,c])=>(
+                        <span key={l} style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:c,background:`${c}15`,padding:"3px 10px",borderRadius:20,border:`1px solid ${c}40`}}>{n} {l}</span>
+                      ))}
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {result.tone_analysis.flags.map((f,i)=>{
+                        const sc = f.severity==="high"?T.red:f.severity==="medium"?T.orange:T.grey;
+                        const catLabel = {"inflated_language":"Linguaggio inflazionato","number_without_context":"Numero senza contesto","strategic_vagueness":"Vaghezza strategica","absolute_claim":"Affermazione assoluta"}[f.category]||f.category;
+                        return (
+                          <div key={i} style={{background:`${sc}10`,border:`1px solid ${sc}30`,borderLeft:`3px solid ${sc}`,borderRadius:5,padding:"10px 14px"}}>
+                            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,marginBottom:4}}>
+                              <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.white,fontStyle:"italic"}}>"{f.phrase}"</span>
+                              <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:sc,flexShrink:0,border:`1px solid ${sc}40`,padding:"1px 7px",borderRadius:10}}>{catLabel}</span>
+                            </div>
+                            <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:11,color:T.whiteDim,lineHeight:1.5}}>{f.explanation}</div>
+                            {f.location && <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey,marginTop:4}}>{f.location}</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Web History */}
             <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:8,padding:"16px 20px"}}>
@@ -943,7 +993,7 @@ export default function TrueScoreApp() {
       if (data.status === "closed" || data.status === "done") {
         es.close();
         const res = await apiResult(job_id);
-        setResult({...res, legal_status: res.legal_status||null, key_people: res.key_people||null, news_flags: res.news_flags||null, web_history: res.web_history||null, job_postings: res.job_postings||null, email_domain: res.email_domain||null, tech_stack: res.tech_stack||null});
+        setResult({...res, legal_status: res.legal_status||null, key_people: res.key_people||null, news_flags: res.news_flags||null, web_history: res.web_history||null, job_postings: res.job_postings||null, email_domain: res.email_domain||null, tech_stack: res.tech_stack||null, tone_analysis: res.tone_analysis||null});
         setScreen("report");
         return;
       }
