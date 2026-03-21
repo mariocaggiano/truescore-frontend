@@ -108,12 +108,32 @@ async function prefetchExternalData(companyName, vatNumber) {
   if (vatNumber) {
     fetches.push(
       proxyFetch(`https://www.ufficiocamerale.it/trova-azienda?piva=${encodeURIComponent(vatNumber)}`)
-        .then(r => { if (r) results.ufficiocamerale = r; })
+        .then(async r => {
+          if (!r) return;
+          // Se la pagina è una search results, segui il primo link azienda
+          const parser = new DOMParser();
+          const doc    = parser.parseFromString(r.html, "text/html");
+          // Cerca link a pagine aziendali (URL con /NNN/slug-nome)
+          const links  = Array.from(doc.querySelectorAll("a[href]"))
+            .map(a => a.getAttribute("href"))
+            .filter(h => h && /\/\d+\/[a-z]/.test(h) && !h.includes("trova-azienda") && !h.includes("news"));
+          if (links.length > 0) {
+            const companyPath = links[0].startsWith("http")
+              ? links[0]
+              : "https://www.ufficiocamerale.it" + links[0];
+            const r2 = await proxyFetch(companyPath);
+            if (r2) { results.ufficiocamerale = r2; return; }
+          }
+          // Fallback: usa la search page direttamente
+          results.ufficiocamerale = r;
+        })
         .catch(() => {})
     );
   }
 
-  const ocQuery = encodeURIComponent(companyName + " srl");
+  // Aggiungi "srl" solo se non già presente nel nome
+  const ocName  = /s\.?r\.?l\.?|s\.?p\.?a\.?/i.test(companyName) ? companyName : companyName + " srl";
+  const ocQuery = encodeURIComponent(ocName);
   fetches.push(
     proxyFetch(`https://opencorporates.com/companies?q=${ocQuery}&jurisdiction_code=it&type=company`)
       .then(r => { if (r) results.opencorporates = r; })
