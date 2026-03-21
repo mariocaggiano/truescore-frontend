@@ -570,7 +570,7 @@ function ReportScreen({ result, jobId, onReset }) {
 
         {/* Tabs */}
         <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.navyBorder}`,marginBottom:18}}>
-          {[["claims",`Claim (${verdicts.length})`],["redflags",`Red Flags (${redFlags.length})`],["people","Persone Chiave"],["legal","Stato Legale"],["sources","Fonti & Disclaimer"]].map(([id,lbl])=>(
+          {[["claims",`Claim (${verdicts.length})`],["redflags",`Red Flags (${redFlags.length})`],["news",`News ${result.news_flags?.high_count>0?"🔴":result.news_flags?.total>0?"🟡":""}`.trim()],["people","Persone Chiave"],["legal","Stato Legale"],["sources","Fonti & Disclaimer"]].map(([id,lbl])=>(
             <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 18px",border:"none",background:"transparent",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===id?T.white:T.grey,fontFamily:"'DM Sans',sans-serif",borderBottom:tab===id?`2px solid ${T.accent}`:"2px solid transparent",marginBottom:-1,transition:"all 0.15s"}}>{lbl}</button>
           ))}
         </div>
@@ -603,6 +603,74 @@ function ReportScreen({ result, jobId, onReset }) {
                 </div>
               ))
             }
+          </div>
+        )}
+
+        {/* Tab: News Red Flags */}
+        {tab === "news" && (
+          <div style={{animation:"fadeUp 0.35s ease both"}}>
+            {!result.news_flags ? (
+              <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:8,padding:32,textAlign:"center"}}>
+                <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:T.grey}}>NEWS_API_KEY NON CONFIGURATA</div>
+                <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.grey,marginTop:10}}>Aggiungi NEWS_API_KEY su Render per abilitare questa funzionalità. Chiave gratuita su <a href="https://newsapi.org/register" target="_blank" rel="noopener noreferrer" style={{color:T.accent}}>newsapi.org</a>.</div>
+              </div>
+            ) : !result.news_flags.found && result.news_flags.searched ? (
+              <div style={{background:T.navyMid,border:`1px solid ${T.greenLight}`,borderLeft:`3px solid ${T.green}`,borderRadius:8,padding:24}}>
+                <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:600,color:T.green,marginBottom:6}}>✓ Nessuna menzione negativa trovata</div>
+                <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.whiteDim,lineHeight:1.7}}>La ricerca su fonti giornalistiche italiane non ha rilevato articoli relativi a cause legali, controversie finanziarie, scandali o violazioni normative per questa azienda.</div>
+              </div>
+            ) : !result.news_flags.found ? (
+              <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:8,padding:24,textAlign:"center"}}>
+                <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:T.grey}}>NESSUN RISULTATO</div>
+              </div>
+            ) : (
+              <div>
+                {/* Summary */}
+                {result.news_flags.summary && (
+                  <div style={{background:result.news_flags.high_count>0?T.redLight:T.orangeLight,border:`1px solid ${result.news_flags.high_count>0?T.red:T.orange}40`,borderLeft:`3px solid ${result.news_flags.high_count>0?T.red:T.orange}`,borderRadius:8,padding:"16px 20px",marginBottom:16}}>
+                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:result.news_flags.high_count>0?T.red:T.orange,letterSpacing:"0.1em",marginBottom:8}}>SINTESI</div>
+                    <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12.5,color:T.white,lineHeight:1.8}}>{result.news_flags.summary}</div>
+                  </div>
+                )}
+
+                {/* Stat strip */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:16}}>
+                  {[["Totale articoli",result.news_flags.total,T.white],["Alta gravità",result.news_flags.high_count,T.red],["Media gravità",result.news_flags.med_count,T.orange]].map(([l,v,c])=>(
+                    <div key={l} style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:7,padding:"12px 14px"}}>
+                      <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:c}}>{v}</div>
+                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,marginTop:4,letterSpacing:"0.08em",textTransform:"uppercase"}}>{l}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Articles */}
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {(result.news_flags.articles||[]).map((a,i) => {
+                    const sc = a.severity==="high"?T.red:a.severity==="medium"?T.orange:T.grey;
+                    const sb = a.severity==="high"?T.redLight:a.severity==="medium"?T.orangeLight:T.greyLight;
+                    const catLabel = {"legal":"Legale","financial":"Finanziario","reputational":"Reputazione","regulatory":"Normativo"}[a.category]||a.category;
+                    return (
+                      <div key={i} style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderLeft:`3px solid ${sc}`,borderRadius:7,padding:"14px 16px"}}>
+                        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:8}}>
+                          <div style={{flex:1}}>
+                            <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:600,color:T.white,marginBottom:4,lineHeight:1.4}}>{a.title}</div>
+                            {a.description && <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:11.5,color:T.whiteDim,lineHeight:1.6}}>{a.description}</div>}
+                          </div>
+                        </div>
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                          <span style={{fontFamily:"'DM Mono',monospace",fontSize:8.5,color:sc,background:`${sc}15`,padding:"2px 8px",borderRadius:20,letterSpacing:"0.06em",border:`1px solid ${sc}30`}}>{a.severity==="high"?"● ALTA":a.severity==="medium"?"● MEDIA":"● BASSA"}</span>
+                          <span style={{fontFamily:"'DM Mono',monospace",fontSize:8.5,color:T.grey,background:T.greyLight,padding:"2px 8px",borderRadius:20,letterSpacing:"0.06em"}}>{catLabel}</span>
+                          {a.source && <span style={{fontFamily:"'DM Mono',monospace",fontSize:8.5,color:T.whiteDim}}>{a.source}</span>}
+                          {a.published_at && <span style={{fontFamily:"'DM Mono',monospace",fontSize:8.5,color:T.grey}}>{a.published_at}</span>}
+                          {a.url && <a href={a.url} target="_blank" rel="noopener noreferrer" style={{fontFamily:"'DM Mono',monospace",fontSize:8.5,color:T.accent,textDecoration:"none",marginLeft:"auto"}}>Leggi →</a>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{marginTop:12,fontFamily:"'DM Mono',monospace",fontSize:8.5,color:T.grey,lineHeight:1.6}}>Fonte: NewsAPI · Solo fonti italiane · Verificare gli articoli originali prima di trarre conclusioni</div>
+              </div>
+            )}
           </div>
         )}
 
@@ -773,7 +841,7 @@ export default function TrueScoreApp() {
       if (data.status === "closed" || data.status === "done") {
         es.close();
         const res = await apiResult(job_id);
-        setResult({...res, legal_status: res.legal_status||null, key_people: res.key_people||null});
+        setResult({...res, legal_status: res.legal_status||null, key_people: res.key_people||null, news_flags: res.news_flags||null});
         setScreen("report");
         return;
       }
