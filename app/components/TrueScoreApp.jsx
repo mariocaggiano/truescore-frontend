@@ -549,7 +549,7 @@ function ReportScreen({ result, jobId, onReset }) {
 
         {/* Tabs */}
         <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.navyBorder}`,marginBottom:18}}>
-          {[["claims",`Claim (${verdicts.length})`],["redflags",`Red Flags (${redFlags.length})`],["sources","Fonti & Disclaimer"]].map(([id,lbl])=>(
+          {[["claims",`Claim (${verdicts.length})`],["redflags",`Red Flags (${redFlags.length})`],["people","Persone Chiave"],["legal","Stato Legale"],["sources","Fonti & Disclaimer"]].map(([id,lbl])=>(
             <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 18px",border:"none",background:"transparent",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===id?T.white:T.grey,fontFamily:"'DM Sans',sans-serif",borderBottom:tab===id?`2px solid ${T.accent}`:"2px solid transparent",marginBottom:-1,transition:"all 0.15s"}}>{lbl}</button>
           ))}
         </div>
@@ -582,6 +582,86 @@ function ReportScreen({ result, jobId, onReset }) {
                 </div>
               ))
             }
+          </div>
+        )}
+
+        {/* Tab: Persone Chiave */}
+        {tab === "people" && (
+          <div style={{animation:"fadeUp 0.35s ease both"}}>
+            {!result.key_people || !result.key_people.found ? (
+              <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:8,padding:32,textAlign:"center"}}>
+                <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:T.grey,letterSpacing:"0.08em",marginBottom:10}}>NESSUNA PERSONA CHIAVE TROVATA</div>
+                <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.grey,lineHeight:1.7}}>Non sono stati trovati profili pubblici. Prova su <a href={`https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(result.company_name)}`} target="_blank" rel="noopener noreferrer" style={{color:T.accent}}>LinkedIn</a>.</div>
+              </div>
+            ) : (
+              <div>
+                {result.key_people.summary && (
+                  <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderLeft:`3px solid ${T.accent}`,borderRadius:8,padding:"16px 20px",marginBottom:16}}>
+                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey,letterSpacing:"0.1em",marginBottom:8}}>RELAZIONE SINTETICA</div>
+                    <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12.5,color:T.whiteDim,lineHeight:1.8}}>{result.key_people.summary}</div>
+                  </div>
+                )}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
+                  {(result.key_people.people||[]).map((p,i) => {
+                    const isTop = ["ceo","founder","fondatore","presidente","managing","cfo","coo","cto","cmo"].some(r=>p.role?.toLowerCase().includes(r));
+                    return (
+                      <div key={i} style={{background:T.navyMid,border:`1px solid ${isTop?T.accentDim:T.navyBorder}`,borderRadius:8,padding:"14px 16px"}}>
+                        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:8}}>
+                          <div>
+                            <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:600,color:T.white}}>{p.name}</div>
+                            <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:isTop?T.accent:T.grey,marginTop:3}}>{p.role}</div>
+                          </div>
+                          {isTop && <span style={{width:8,height:8,borderRadius:"50%",background:T.accent,flexShrink:0,marginTop:4}}/>}
+                        </div>
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                          {p.linkedin && <a href={p.linkedin} target="_blank" rel="noopener noreferrer" style={{fontFamily:"'DM Mono',monospace",fontSize:8.5,color:T.accent,background:`${T.accent}15`,padding:"2px 10px",borderRadius:20,textDecoration:"none",border:`1px solid ${T.accentDim}`}}>LinkedIn →</a>}
+                          <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,padding:"2px 8px",borderRadius:20,border:`1px solid ${T.navyBorder}`}}>{p.source==="linkedin"?"LinkedIn":p.source==="website_team_page"?"Sito web":"Google"}</span>
+                          <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,opacity:0.6}}>{Math.round((p.confidence||0)*100)}% conf.</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {result.key_people.sources?.length > 0 && <div style={{marginTop:12,fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey}}>Fonti: {result.key_people.sources.join(" · ")}</div>}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab: Stato Legale */}
+        {tab === "legal" && (
+          <div style={{animation:"fadeUp 0.35s ease both"}}>
+            {!result.legal_status || !result.legal_status.found ? (
+              <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:8,padding:32,textAlign:"center"}}>
+                <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:T.grey,letterSpacing:"0.08em"}}>AZIENDA NON TROVATA SU OPENCORPORATES</div>
+              </div>
+            ) : (() => {
+              const ls = result.legal_status;
+              const statusColor = ls.status_normalized==="attiva"?T.green:ls.status_normalized==="cessata"?T.red:T.orange;
+              return (
+                <div>
+                  <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderLeft:`3px solid ${statusColor}`,borderRadius:8,padding:"20px 24px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                    <div>
+                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey,letterSpacing:"0.1em",marginBottom:8}}>STATO SOCIETARIO</div>
+                      <div style={{display:"flex",alignItems:"center",gap:12}}>
+                        <span style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:statusColor}}>{ls.status_label}</span>
+                        <span style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:statusColor,background:`${statusColor}15`,padding:"3px 10px",borderRadius:20,border:`1px solid ${statusColor}40`}}>OPENCORPORATES</span>
+                      </div>
+                    </div>
+                    {ls.opencorporates_url && <a href={ls.opencorporates_url} target="_blank" rel="noopener noreferrer" style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.accent,border:`1px solid ${T.accentDim}`,padding:"6px 12px",borderRadius:5,textDecoration:"none"}}>SCHEDA →</a>}
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10,marginBottom:12}}>
+                    {[["Denominazione",ls.name||"—"],["Forma giuridica",ls.company_type||"—"],["N° di registro",ls.company_number||"—"],["Data costituzione",ls.incorporation_date?new Date(ls.incorporation_date).toLocaleDateString("it-IT"):"—"],["Sede legale",ls.registered_address||"—"],["Data cessazione",ls.dissolution_date?new Date(ls.dissolution_date).toLocaleDateString("it-IT"):"—"]].map(([label,value])=>(
+                      <div key={label} style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:6,padding:"12px 14px"}}>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,letterSpacing:"0.1em",marginBottom:5}}>{label}</div>
+                        <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12.5,color:T.white,fontWeight:500}}>{value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {ls.flags?.length>0 && <div style={{display:"flex",flexDirection:"column",gap:8}}>{ls.flags.map((f,i)=>{const fc=f.severity==="critical"?T.red:f.severity==="warning"?T.orange:T.grey;return(<div key={i} style={{background:f.severity==="critical"?T.redLight:f.severity==="warning"?T.orangeLight:T.greyLight,border:`1px solid ${fc}40`,borderLeft:`3px solid ${fc}`,borderRadius:6,padding:"12px 14px"}}><span style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:fc,marginRight:8,fontWeight:700}}>{f.severity==="critical"?"⚠ CRITICO":f.severity==="warning"?"! ATTENZIONE":"ℹ INFO"}</span><span style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.white}}>{f.text}</span></div>);})}</div>}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -672,7 +752,7 @@ export default function TrueScoreApp() {
       if (data.status === "closed" || data.status === "done") {
         es.close();
         const res = await apiResult(job_id);
-        setResult({...res, legal_status: res.legal_status||null});
+        setResult({...res, legal_status: res.legal_status||null, key_people: res.key_people||null});
         setScreen("report");
         return;
       }
