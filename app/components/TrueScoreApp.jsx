@@ -101,6 +101,7 @@ async function proxyFetch(url) {
 }
 
 async function prefetchExternalData(companyName, vatNumber) {
+  companyName = companyName.trim();
   const results = { ufficiocamerale: null, opencorporates: null };
   const fetches = [];
 
@@ -146,7 +147,7 @@ async function prefetchExternalData(companyName, vatNumber) {
 
 async function apiAnalyze({ companyName, pitchText, bilancioText, websiteUrl, sector, pitchFile, bilancioFile, linkedinUrl, vatNumber, prefetchedData }) {
   const form = new FormData();
-  form.append("company_name", companyName);
+  form.append("company_name", companyName.trim());
   if (pitchText)    form.append("pitch_text", pitchText);
   if (bilancioText) form.append("bilancio_text", bilancioText);
   if (websiteUrl)   form.append("website_url", websiteUrl);
