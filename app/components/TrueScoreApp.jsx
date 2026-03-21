@@ -551,6 +551,11 @@ function ReportScreen({ result, jobId, onReset }) {
             </div>
           </div>
           <TrustMeter score={score}/>
+          {score===-2 && (
+            <div style={{marginTop:12,padding:"10px 14px",background:`${T.accent}10`,border:`1px solid ${T.accentDim}`,borderRadius:6,fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.whiteDim,lineHeight:1.7}}>
+              <span style={{color:T.accent,fontWeight:600}}>ℹ Fonti consultate con successo</span> — LinkedIn, partner website e altre fonti hanno restituito dati reali. Tuttavia il pitch deck non contiene valori numerici espliciti (es. "12 dipendenti", "45 partner"), quindi non è possibile calcolare uno scarto. <strong style={{color:T.white}}>Aggiungi numeri specifici al pitch deck</strong> per abilitare il Trust Score.
+            </div>
+          )}
         </div>
 
         {/* Stat strip */}
