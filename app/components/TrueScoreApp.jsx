@@ -145,7 +145,19 @@ async function prefetchExternalData(companyName, vatNumber) {
   return results;
 }
 
-async function apiAnalyze({ companyName, pitchText, bilancioText, websiteUrl, sector, pitchFile, bilancioFile, linkedinUrl, vatNumber, prefetchedData }) {
+async function createShare(jobId) {
+  const res = await fetch(`${API_BASE}/api/share/${jobId}`, { method: "POST" });
+  if (!res.ok) throw new Error("Share fallito");
+  return res.json();
+}
+
+async function getShare(token) {
+  const res = await fetch(`${API_BASE}/api/share/${token}`);
+  if (!res.ok) throw new Error("Link non trovato o scaduto");
+  return res.json();
+}
+
+({ companyName, pitchText, bilancioText, websiteUrl, sector, pitchFile, bilancioFile, linkedinUrl, vatNumber, prefetchedData }) {
   const form = new FormData();
   form.append("company_name", companyName.trim());
   if (pitchText)    form.append("pitch_text", pitchText);
@@ -495,8 +507,11 @@ function AnalyzingScreen({ companyName, steps }) {
   );
 }
 
-function ReportScreen({ result, jobId, onReset }) {
+function ReportScreen({ result, jobId, onReset, sharedView=false, shareExpiry=null }) {
   const [tab, setTab] = useState("claims");
+  const [shareUrl, setShareUrl]         = useState(null);
+  const [shareCopied, setShareCopied]   = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
   const score    = result.trust_score;
   const scoreC   = score<0?T.grey:score<4?T.red:score<6.5?T.orange:T.green;
   const verdicts = result.verdicts || [];
@@ -507,6 +522,20 @@ function ReportScreen({ result, jobId, onReset }) {
     <div style={{minHeight:"100vh",background:T.navy,color:T.white,fontFamily:"'DM Sans',sans-serif"}}>
       <Grain/>
       <style>{css}</style>
+
+      {/* Shared view banner */}
+      {sharedView && (
+        <div style={{background:`${T.accent}18`,borderBottom:`1px solid ${T.accentDim}`,padding:"8px 24px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.accent,letterSpacing:"0.1em"}}>
+            🔗 VISUALIZZAZIONE CONDIVISA — questo report è stato condiviso con te
+          </div>
+          {shareExpiry!=null && (
+            <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey}}>
+              Scade tra {shareExpiry}h
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Sticky topbar */}
       <div style={{background:T.navyMid,borderBottom:`1px solid ${T.navyBorder}`,padding:"12px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
@@ -534,6 +563,33 @@ function ReportScreen({ result, jobId, onReset }) {
               style={{padding:"6px 14px",background:T.accent,borderRadius:5,color:"white",textDecoration:"none",fontFamily:"'DM Mono',monospace",fontSize:9,letterSpacing:"0.06em"}}>
               ↓ PDF
             </a>
+          )}
+          {hasApi && (
+            <button
+              onClick={async () => {
+                if (shareUrl) {
+                  await navigator.clipboard.writeText(shareUrl);
+                  setShareCopied(true);
+                  setTimeout(() => setShareCopied(false), 2500);
+                  return;
+                }
+                setShareLoading(true);
+                try {
+                  const { token } = await createShare(jobId);
+                  const url = `${window.location.origin}${window.location.pathname}?share=${token}`;
+                  setShareUrl(url);
+                  await navigator.clipboard.writeText(url);
+                  setShareCopied(true);
+                  setTimeout(() => setShareCopied(false), 2500);
+                } catch(e) {
+                  alert("Impossibile creare il link condivisibile");
+                } finally {
+                  setShareLoading(false);
+                }
+              }}
+              style={{padding:"6px 14px",background:"transparent",border:`1px solid ${shareCopied?T.green:T.navyBorder}`,borderRadius:5,color:shareCopied?T.green:T.whiteDim,cursor:"pointer",fontFamily:"'DM Mono',monospace",fontSize:9,letterSpacing:"0.06em",transition:"all 0.2s"}}>
+              {shareLoading ? "..." : shareCopied ? "✓ COPIATO" : "🔗 CONDIVIDI"}
+            </button>
           )}
           <button onClick={onReset} style={{padding:"6px 14px",background:"transparent",border:`1px solid ${T.navyBorder}`,borderRadius:5,color:T.whiteDim,cursor:"pointer",fontFamily:"'DM Mono',monospace",fontSize:9,letterSpacing:"0.06em"}}>
             NUOVA ANALISI
@@ -940,12 +996,45 @@ export default function TrueScoreApp() {
   const [jobId,     setJobId]     = useState(null);
   const [companyName, setCN]      = useState("");
   const [result,    setResult]    = useState(null);
+  const [sharedView, setSharedView] = useState(false);
+  const [shareExpiry, setShareExpiry] = useState(null);
   const [steps, setSteps] = useState([
     { n:1, label:"Claim Extractor",     status:"idle", detail:null },
     { n:2, label:"Data Collector",      status:"idle", detail:null },
     { n:3, label:"Verification Engine", status:"idle", detail:null },
     { n:4, label:"Report Generator",    status:"idle", detail:null },
   ]);
+
+  // ── Controlla se URL ha ?share=TOKEN ──────────────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token  = params.get("share");
+    if (!token) return;
+    (async () => {
+      try {
+        const data = await getShare(token);
+        const res  = data.result;
+        setResult({
+          ...res,
+          legal_status:  res.legal_status  || null,
+          key_people:    res.key_people    || null,
+          news_flags:    res.news_flags    || null,
+          web_history:   res.web_history   || null,
+          job_postings:  res.job_postings  || null,
+          email_domain:  res.email_domain  || null,
+          tech_stack:    res.tech_stack    || null,
+          tone_analysis: res.tone_analysis || null,
+        });
+        setSharedView(true);
+        setShareExpiry(data.remaining_hours);
+        setCN(res.company_name || "");
+        setScreen("report");
+      } catch(e) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    })();
+  }, []);
+
 
   const updStep = (idx, patch) =>
     setSteps(prev => prev.map((s,i) => i===idx ? {...s,...patch} : s));
@@ -1040,6 +1129,6 @@ export default function TrueScoreApp() {
 
   if (screen==="upload")    return <UploadScreen onSubmit={handleSubmit}/>;
   if (screen==="analyzing") return <AnalyzingScreen companyName={companyName} steps={steps}/>;
-  if (screen==="report")    return <ReportScreen result={result} jobId={jobId} onReset={handleReset}/>;
+  if (screen==="report")    return <ReportScreen result={result} jobId={jobId} onReset={handleReset} sharedView={sharedView} shareExpiry={shareExpiry}/>;
   return null;
 }
