@@ -157,7 +157,7 @@ async function getShare(token) {
   return res.json();
 }
 
-({ companyName, pitchText, bilancioText, websiteUrl, sector, pitchFile, bilancioFile, linkedinUrl, vatNumber, prefetchedData }) {
+async function apiAnalyze({ companyName, pitchText, bilancioText, websiteUrl, sector, pitchFile, bilancioFile, linkedinUrl, vatNumber, prefetchedData }) {
   const form = new FormData();
   form.append("company_name", companyName.trim());
   if (pitchText)    form.append("pitch_text", pitchText);
