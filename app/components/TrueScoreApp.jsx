@@ -537,6 +537,23 @@ function ReportScreen({ result, jobId, onReset, sharedView=false, shareExpiry=nu
         </div>
       )}
 
+      {/* Coherence issues banner */}
+      {result.coherence_issues?.length > 0 && (
+        <div style={{background:`${T.red}10`,borderBottom:`2px solid ${T.red}50`,padding:"10px 24px"}}>
+          <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.red,letterSpacing:"0.12em",marginBottom:6}}>⚠ AVVISO — PROBLEMI DI COERENZA DEI DATI</div>
+          {result.coherence_issues.map((issue, i) => {
+            const isCritical = issue.severity === "critical";
+            const color = isCritical ? T.red : T.orange;
+            return (
+              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:4}}>
+                <span style={{color,fontSize:12,flexShrink:0}}>{isCritical ? "✕" : "⚠"}</span>
+                <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color,lineHeight:1.5}}>{issue.message}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Sticky topbar */}
       <div style={{background:T.navyMid,borderBottom:`1px solid ${T.navyBorder}`,padding:"12px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:14}}>
@@ -1082,7 +1099,7 @@ export default function TrueScoreApp() {
       if (data.status === "closed" || data.status === "done") {
         es.close();
         const res = await apiResult(job_id);
-        setResult({...res, legal_status: res.legal_status||null, key_people: res.key_people||null, news_flags: res.news_flags||null, web_history: res.web_history||null, job_postings: res.job_postings||null, email_domain: res.email_domain||null, tech_stack: res.tech_stack||null, tone_analysis: res.tone_analysis||null});
+        setResult({...res, legal_status: res.legal_status||null, key_people: res.key_people||null, news_flags: res.news_flags||null, web_history: res.web_history||null, job_postings: res.job_postings||null, email_domain: res.email_domain||null, tech_stack: res.tech_stack||null, tone_analysis: res.tone_analysis||null, coherence_issues: res.coherence_issues||[]});
         setScreen("report");
         return;
       }
