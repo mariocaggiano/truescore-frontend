@@ -1,3 +1,4 @@
+// TrueScore Frontend v2.4 — coherence check + share link + tone analysis
 import { useState, useEffect, useRef, useCallback } from "react";
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -1099,6 +1100,7 @@ export default function TrueScoreApp() {
       if (data.status === "closed" || data.status === "done") {
         es.close();
         const res = await apiResult(job_id);
+        console.log("[TrueScore] result ricevuto:", JSON.stringify({coherence_issues: res.coherence_issues, trust_score: res.trust_score}));
         setResult({...res, legal_status: res.legal_status||null, key_people: res.key_people||null, news_flags: res.news_flags||null, web_history: res.web_history||null, job_postings: res.job_postings||null, email_domain: res.email_domain||null, tech_stack: res.tech_stack||null, tone_analysis: res.tone_analysis||null, coherence_issues: res.coherence_issues||[]});
         setScreen("report");
         return;
