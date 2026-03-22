@@ -539,15 +539,15 @@ function ReportScreen({ result, jobId, onReset, sharedView=false, shareExpiry=nu
 
       {/* Coherence issues banner */}
       {result.coherence_issues?.length > 0 && (
-        <div style={{background:`${T.red}10`,borderBottom:`2px solid ${T.red}50`,padding:"10px 24px"}}>
-          <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.red,letterSpacing:"0.12em",marginBottom:6}}>⚠ AVVISO — PROBLEMI DI COERENZA DEI DATI</div>
+        <div style={{background:"#5c1010",borderBottom:`3px solid ${T.red}`,padding:"12px 24px",position:"relative",zIndex:200}}>
+          <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"#ff6b6b",letterSpacing:"0.12em",marginBottom:8,fontWeight:700}}>⚠ AVVISO — PROBLEMI DI COERENZA DEI DATI</div>
           {result.coherence_issues.map((issue, i) => {
             const isCritical = issue.severity === "critical";
-            const color = isCritical ? T.red : T.orange;
+            const color = isCritical ? "#ff6b6b" : T.orange;
             return (
               <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:4}}>
-                <span style={{color,fontSize:12,flexShrink:0}}>{isCritical ? "✕" : "⚠"}</span>
-                <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color,lineHeight:1.5}}>{issue.message}</span>
+                <span style={{color,fontSize:13,flexShrink:0,fontWeight:700}}>{isCritical ? "✕" : "⚠"}</span>
+                <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:12.5,color,lineHeight:1.5}}>{issue.message}</span>
               </div>
             );
           })}
