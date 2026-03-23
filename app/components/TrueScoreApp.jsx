@@ -641,6 +641,12 @@ function ReportScreen({ result, jobId, onReset, sharedView=false, shareExpiry=nu
   const [shareCopied, setShareCopied]   = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
 
+  const score    = result.trust_score;
+  const scoreC   = score<0?T.grey:score<4?T.red:score<6.5?T.orange:T.green;
+  const verdicts = result.verdicts || [];
+  const redFlags = verdicts.filter(v=>result.red_flags?.includes(v.id));
+  const hasApi   = jobId && !USE_MOCK;
+
   useEffect(() => {
     if (tab !== "history" || history.length > 0 || historyLoading || !hasApi) return;
     (async () => {
@@ -655,12 +661,6 @@ function ReportScreen({ result, jobId, onReset, sharedView=false, shareExpiry=nu
       finally { setHistoryLoading(false); }
     })();
   }, [tab]);
-
-  const score    = result.trust_score;
-  const scoreC   = score<0?T.grey:score<4?T.red:score<6.5?T.orange:T.green;
-  const verdicts = result.verdicts || [];
-  const redFlags = verdicts.filter(v=>result.red_flags?.includes(v.id));
-  const hasApi   = jobId && !USE_MOCK;
 
   return (
     <div style={{minHeight:"100vh",background:T.navy,color:T.white,fontFamily:"'DM Sans',sans-serif"}}>
