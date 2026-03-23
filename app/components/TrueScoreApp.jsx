@@ -158,14 +158,15 @@ async function getShare(token) {
   return res.json();
 }
 
-async function apiAnalyze({ companyName, pitchText, bilancioText, websiteUrl, sector, pitchFile, bilancioFile, linkedinUrl, vatNumber, prefetchedData }) {
+async function apiAnalyze({ companyName, pitchText, bilancioText, websiteUrl, sector, pitchFile, bilancioFile, linkedinUrl, vatNumber, prefetchedData, recipientEmail }) {
   const form = new FormData();
   form.append("company_name", companyName.trim());
   if (pitchText)    form.append("pitch_text", pitchText);
   if (bilancioText) form.append("bilancio_text", bilancioText);
   if (websiteUrl)   form.append("website_url", websiteUrl);
   if (sector)       form.append("sector", sector);
-  if (linkedinUrl)  form.append("linkedin_url", linkedinUrl);
+  if (linkedinUrl)     form.append("linkedin_url",     linkedinUrl);
+  if (recipientEmail)  form.append("recipient_email",  recipientEmail);
   if (vatNumber)    form.append("vat_number", vatNumber);
   if (pitchFile)    form.append("pitch_file", pitchFile);
   if (bilancioFile) form.append("bilancio_file", bilancioFile);
@@ -362,6 +363,7 @@ function UploadScreen({ onSubmit }) {
   const [websiteUrl,   setWebsiteUrl]  = useState("");
   const [sector,       setSector]      = useState("");
   const [linkedinUrl,  setLinkedinUrl] = useState("");
+  const [recipientEmail, setRecipientEmail] = useState("");
   const [vatNumber,    setVatNumber]   = useState("");
 
   const canSubmit = companyName.trim().length > 0;
@@ -467,8 +469,26 @@ function UploadScreen({ onSubmit }) {
             </div>
           </div>
 
+          {/* Email report */}
+          <div>
+            {label("Invia report via email", true)}
+            <div style={{position:"relative"}}>
+              <input
+                type="email"
+                value={recipientEmail}
+                onChange={e=>setRecipientEmail(e.target.value)}
+                placeholder="mario@azienda.it (opzionale)"
+                style={{width:"100%",padding:"10px 14px 10px 36px",background:T.navyLight,border:`1px solid ${T.navyBorder}`,borderRadius:5,color:T.white,fontFamily:"'DM Mono',monospace",fontSize:12,outline:"none",boxSizing:"border-box"}}
+              />
+              <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:13,opacity:0.5}}>✉</span>
+            </div>
+            <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey,marginTop:4}}>
+              Il PDF verrà inviato automaticamente al termine dell'analisi
+            </div>
+          </div>
+
           {/* CTA */}
-          <button onClick={()=>onSubmit({companyName,pitchText,bilancioText,websiteUrl,sector,pitchFile,bilancioFile,linkedinUrl,vatNumber})}
+          <button onClick={()=>onSubmit({companyName,pitchText,bilancioText,websiteUrl,sector,pitchFile,bilancioFile,linkedinUrl,vatNumber,recipientEmail})}
             disabled={!canSubmit}
             style={{marginTop:4,padding:"14px 24px",background:canSubmit?T.accent:T.navyBorder,border:"none",borderRadius:6,cursor:canSubmit?"pointer":"not-allowed",color:"white",fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:600,letterSpacing:"0.02em",transition:"all 0.2s",boxShadow:canSubmit?`0 0 24px ${T.accent}40`:"none"}}>
             Avvia Analisi →
