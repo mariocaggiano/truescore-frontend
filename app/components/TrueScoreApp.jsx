@@ -469,24 +469,6 @@ function UploadScreen({ onSubmit }) {
             </div>
           </div>
 
-          {/* Email report */}
-          <div>
-            {label("Invia report via email", true)}
-            <div style={{position:"relative"}}>
-              <input
-                type="email"
-                value={recipientEmail}
-                onChange={e=>setRecipientEmail(e.target.value)}
-                placeholder="mario@azienda.it (opzionale)"
-                style={{width:"100%",padding:"10px 14px 10px 36px",background:T.navyLight,border:`1px solid ${T.navyBorder}`,borderRadius:5,color:T.white,fontFamily:"'DM Mono',monospace",fontSize:12,outline:"none",boxSizing:"border-box"}}
-              />
-              <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:13,opacity:0.5}}>✉</span>
-            </div>
-            <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey,marginTop:4}}>
-              Il PDF verrà inviato automaticamente al termine dell'analisi
-            </div>
-          </div>
-
           {/* CTA */}
           <button onClick={()=>onSubmit({companyName,pitchText,bilancioText,websiteUrl,sector,pitchFile,bilancioFile,linkedinUrl,vatNumber,recipientEmail})}
             disabled={!canSubmit}
