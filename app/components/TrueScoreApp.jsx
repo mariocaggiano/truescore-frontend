@@ -799,10 +799,75 @@ function ReportScreen({ result, jobId, onReset, sharedView=false, shareExpiry=nu
 
         {/* Tabs */}
         <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.navyBorder}`,marginBottom:18}}>
-          {[["history","Storico"],["insights","Insights"],["claims",`Claim (${verdicts.length})`],["redflags",`Red Flags (${redFlags.length})`],["news",`News ${result.news_flags?.high_count>0?"🔴":result.news_flags?.total>0?"🟡":""}`.trim()],["people","Persone Chiave"],["legal","Stato Legale"],["sources","Fonti & Disclaimer"]].map(([id,lbl])=>(
+          {[["history","Storico"],["crosschecks","Cross-Check"],["insights","Insights"],["claims",`Claim (${verdicts.length})`],["redflags",`Red Flags (${redFlags.length})`],["news",`News ${result.news_flags?.high_count>0?"🔴":result.news_flags?.total>0?"🟡":""}`.trim()],["people","Persone Chiave"],["legal","Stato Legale"],["sources","Fonti & Disclaimer"]].map(([id,lbl])=>(
             <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 18px",border:"none",background:"transparent",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===id?T.white:T.grey,fontFamily:"'DM Sans',sans-serif",borderBottom:tab===id?`2px solid ${T.accent}`:"2px solid transparent",marginBottom:-1,transition:"all 0.15s"}}>{lbl}</button>
           ))}
         </div>
+
+        {/* Tab: Cross-Check */}
+        {tab === "crosschecks" && (
+          <div style={{animation:"fadeUp 0.35s ease both",display:"flex",flexDirection:"column",gap:10}}>
+            {(!result.cross_checks || result.cross_checks.length === 0) ? (
+              <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:8,padding:32,textAlign:"center"}}>
+                <div style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:T.green,letterSpacing:"0.08em",marginBottom:8}}>✓ NESSUNA ANOMALIA DI COERENZA RILEVATA</div>
+                <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.grey,lineHeight:1.7}}>Le metriche dichiarate sono internamente coerenti con i dati verificati.</div>
+              </div>
+            ) : result.cross_checks.map((c, i) => {
+              const sevColor = c.severity==="critical"?T.red:c.severity==="high"?"#E08000":T.grey;
+              const sevBg    = c.severity==="critical"?T.redLight:c.severity==="high"?"#2E1800":T.navyLight;
+              const sevLabel = {critical:"CRITICO",high:"ALTO",medium:"MEDIO",low:"BASSO"}[c.severity]||c.severity.toUpperCase();
+              const verdLabel= {implausible:"IMPLAUSIBILE",suspicious:"SOSPETTO",unverifiable:"NON VERIF."}[c.verdict]||c.verdict;
+              return (
+                <div key={i} style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderLeft:`3px solid ${sevColor}`,borderRadius:8,overflow:"hidden"}}>
+                  <div style={{padding:"12px 16px",background:sevBg,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:sevColor,background:`${sevColor}20`,padding:"2px 8px",borderRadius:10,border:`1px solid ${sevColor}40`}}>{sevLabel}</span>
+                      <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:600,color:T.white}}>{c.title}</span>
+                    </div>
+                    <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:sevColor,border:`1px solid ${sevColor}40`,padding:"2px 8px",borderRadius:10,flexShrink:0}}>{verdLabel}</span>
+                  </div>
+                  <div style={{padding:"12px 16px"}}>
+                    <div style={{display:"grid",gridTemplateColumns:c.derived&&c.derived.value!=null?"1fr 1fr 1fr":"1fr 1fr",gap:8,marginBottom:12}}>
+                      {[
+                        {label:c.metric_a&&c.metric_a.label,val:c.metric_a&&c.metric_a.value,src:c.metric_a&&c.metric_a.source},
+                        {label:c.metric_b&&c.metric_b.label,val:typeof c.metric_b?.value==="number"?c.metric_b.value:null,src:c.metric_b&&c.metric_b.source},
+                        c.derived&&c.derived.value!=null?{label:c.derived.label,val:`${c.derived.value} ${c.derived.unit||""}`.trim(),src:"calcolato",highlight:true}:null
+                      ].filter(Boolean).map((m,j)=>(
+                        <div key={j} style={{background:T.navyLight,border:`1px solid ${T.navyBorder}`,borderRadius:5,padding:"10px 12px"}}>
+                          <div style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,letterSpacing:"0.08em",marginBottom:4}}>{m.label}</div>
+                          <div style={{fontFamily:"'DM Mono',monospace",fontSize:13,color:m.highlight?sevColor:T.white,fontWeight:500}}>
+                            {m.val!=null?(typeof m.val==="number"?m.val.toLocaleString("it-IT"):String(m.val)):"—"}
+                          </div>
+                          {m.src && <div style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,marginTop:2,opacity:0.7}}>{m.src}</div>}
+                        </div>
+                      ))}
+                    </div>
+                    {c.benchmark&&c.benchmark.min!=null&&c.benchmark.max!=null&&(
+                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey,marginBottom:10}}>
+                        Benchmark {c.benchmark.sector}: {Number(c.benchmark.min).toLocaleString("it-IT")}–{Number(c.benchmark.max).toLocaleString("it-IT")} {c.benchmark.unit}
+                      </div>
+                    )}
+                    {c.explanation&&<div style={{fontFamily:"'DM Sans',sans-serif",fontSize:11.5,color:T.whiteDim,lineHeight:1.7,background:T.navy,borderRadius:5,padding:"10px 12px",marginBottom:c.sources&&c.sources.length>0?10:0}}>{c.explanation}</div>}
+                    {c.sources&&c.sources.length>0&&(
+                      <div style={{marginTop:8}}>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,letterSpacing:"0.1em",marginBottom:6}}>FONTI</div>
+                        <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                          {c.sources.map((s,si)=>(
+                            <div key={si} style={{display:"flex",alignItems:"flex-start",gap:8,background:T.navyLight,borderRadius:4,padding:"6px 10px"}}>
+                              <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.accent,flexShrink:0,marginTop:1,background:`${T.accent}15`,padding:"1px 6px",borderRadius:8,border:`1px solid ${T.accentDim}`}}>{s.type}</span>
+                              <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:11,color:T.whiteDim,flex:1,lineHeight:1.5}}>{s.quote}</span>
+                              {s.confidence>0&&<span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,flexShrink:0}}>{Math.round(s.confidence*100)}%</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Tab: Storico */}
         {tab === "history" && (
@@ -1257,7 +1322,7 @@ export default function TrueScoreApp() {
         es.close();
         const res = await apiResult(job_id);
         console.log("[TrueScore] result ricevuto:", JSON.stringify({coherence_issues: res.coherence_issues, trust_score: res.trust_score}));
-        setResult({...res, legal_status: res.legal_status||null, key_people: res.key_people||null, news_flags: res.news_flags||null, web_history: res.web_history||null, job_postings: res.job_postings||null, email_domain: res.email_domain||null, tech_stack: res.tech_stack||null, tone_analysis: res.tone_analysis||null, coherence_issues: res.coherence_issues||[]});
+        setResult({...res, legal_status: res.legal_status||null, key_people: res.key_people||null, news_flags: res.news_flags||null, web_history: res.web_history||null, job_postings: res.job_postings||null, email_domain: res.email_domain||null, tech_stack: res.tech_stack||null, tone_analysis: res.tone_analysis||null, coherence_issues: res.coherence_issues||[], cross_checks: res.cross_checks||[]});
         setScreen("report");
         return;
       }
