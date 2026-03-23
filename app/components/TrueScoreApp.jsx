@@ -510,11 +510,152 @@ function AnalyzingScreen({ companyName, steps }) {
   );
 }
 
+function HistoryTab({ companyName, currentScore, history, loading }) {
+  if (loading) return (
+    <div style={{textAlign:"center",padding:"40px 0",color:T.grey,fontFamily:"'DM Mono',monospace",fontSize:11}}>
+      Caricamento storico...
+    </div>
+  );
+
+  // Combina history dal server con il record corrente
+  const currentRecord = currentScore >= 0 ? {
+    analyzed_at: new Date().toISOString(),
+    trust_score: currentScore,
+    _current: true,
+  } : null;
+
+  const allRecords = currentRecord
+    ? [currentRecord, ...history.filter(r => r._current !== true)]
+    : history;
+
+  if (allRecords.length === 0) return (
+    <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:8,padding:"24px",textAlign:"center"}}>
+      <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey,letterSpacing:"0.12em",marginBottom:8}}>STORICO ANALISI</div>
+      <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:13,color:T.grey}}>Nessuna analisi precedente trovata per {companyName}</div>
+    </div>
+  );
+
+  // Grafico sparkline SVG
+  const scores = allRecords
+    .filter(r => r.trust_score != null)
+    .slice(0, 20)
+    .reverse();
+
+  const W = 560, H = 120, PAD = 24;
+  const minS = Math.max(0, Math.min(...scores.map(r => r.trust_score)) - 1);
+  const maxS = Math.min(10, Math.max(...scores.map(r => r.trust_score)) + 1);
+  const xStep = scores.length > 1 ? (W - PAD*2) / (scores.length - 1) : 0;
+  const toY = v => PAD + (H - PAD*2) * (1 - (v - minS) / (maxS - minS));
+  const toX = i => PAD + i * xStep;
+
+  const points = scores.map((r,i) => `${toX(i).toFixed(1)},${toY(r.trust_score).toFixed(1)}`).join(" ");
+  const areaPoints = scores.length > 0
+    ? `${toX(0).toFixed(1)},${H} ` + points + ` ${toX(scores.length-1).toFixed(1)},${H}`
+    : "";
+
+  const colorForScore = s => s < 4 ? T.red : s < 6.5 ? T.orange : T.green;
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+
+      {/* Grafico */}
+      {scores.length >= 2 && (
+        <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:8,padding:"16px 20px"}}>
+          <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.accent,letterSpacing:"0.12em",marginBottom:12}}>ANDAMENTO TRUST SCORE</div>
+          <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{overflow:"visible"}}>
+            {/* Griglia */}
+            {[4,6.5,8].map(g => (
+              <line key={g} x1={PAD} y1={toY(g)} x2={W-PAD} y2={toY(g)}
+                stroke={T.navyBorder} strokeWidth="1" strokeDasharray="3,4"/>
+            ))}
+            {/* Area */}
+            <polygon points={areaPoints} fill={`${T.accent}18`}/>
+            {/* Linea */}
+            <polyline points={points} fill="none" stroke={T.accent} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+            {/* Punti */}
+            {scores.map((r,i) => (
+              <circle key={i} cx={toX(i)} cy={toY(r.trust_score)} r={r._current?5:4}
+                fill={colorForScore(r.trust_score)}
+                stroke={r._current?T.white:T.navyMid} strokeWidth={r._current?2:1}/>
+            ))}
+            {/* Labels asse Y */}
+            {[4,6.5,8].map(g => (
+              <text key={g} x={PAD-4} y={toY(g)+4} textAnchor="end"
+                fontFamily="monospace" fontSize="9" fill={T.grey}>{g}</text>
+            ))}
+          </svg>
+          <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+            <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey}}>
+              {scores[0]?.analyzed_at ? new Date(scores[0].analyzed_at).toLocaleDateString("it-IT") : ""}
+            </span>
+            <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey}}>oggi</span>
+          </div>
+        </div>
+      )}
+
+      {/* Tabella analisi */}
+      <div style={{background:T.navyMid,border:`1px solid ${T.navyBorder}`,borderRadius:8,overflow:"hidden"}}>
+        <div style={{padding:"12px 20px",borderBottom:`1px solid ${T.navyBorder}`,fontFamily:"'DM Mono',monospace",fontSize:9,color:T.accent,letterSpacing:"0.12em"}}>
+          ANALISI PRECEDENTI — {allRecords.length} record{allRecords.length===1?"":"s"}
+        </div>
+        {allRecords.slice(0,15).map((r,i) => {
+          const sc = r.trust_score;
+          const c  = sc==null?T.grey:sc<4?T.red:sc<6.5?T.orange:T.green;
+          const d  = r.analyzed_at ? new Date(r.analyzed_at) : null;
+          const dateStr = d ? d.toLocaleDateString("it-IT",{day:"2-digit",month:"short",year:"numeric"}) : "—";
+          const timeStr = d ? d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}) : "";
+          return (
+            <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",borderBottom:i<allRecords.length-1?`1px solid ${T.navyBorder}`:"none",background:r._current?`${T.accent}08`:"transparent"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                {r._current && <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.accent,background:`${T.accent}20`,padding:"2px 8px",borderRadius:10,border:`1px solid ${T.accentDim}`}}>CORRENTE</span>}
+                <div>
+                  <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.white}}>{dateStr}</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:9,color:T.grey}}>{timeStr}</div>
+                </div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:16}}>
+                {r.coherence_issues > 0 && <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.orange}}>⚠ {r.coherence_issues} coerenza</span>}
+                {r.discrepancies > 0 && <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.red}}>✕ {r.discrepancies} discrepanze</span>}
+                <div style={{textAlign:"right"}}>
+                  <span style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:c}}>
+                    {sc==null?"N/D":sc.toFixed(1)}
+                  </span>
+                  <span style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey}}>/10</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+    </div>
+  );
+}
+
+
 function ReportScreen({ result, jobId, onReset, sharedView=false, shareExpiry=null }) {
   const [tab, setTab] = useState("claims");
   const [shareUrl, setShareUrl]         = useState(null);
+  const [history,  setHistory]          = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [shareCopied, setShareCopied]   = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
+
+  useEffect(() => {
+    if (tab !== "history" || history.length > 0 || historyLoading || !hasApi) return;
+    (async () => {
+      setHistoryLoading(true);
+      try {
+        const name = encodeURIComponent(result.company_name || "");
+        const vat  = result.vat_number ? `?vat_number=${encodeURIComponent(result.vat_number)}` : "";
+        const res  = await fetch(`${API_BASE}/api/history/${name}${vat}`);
+        const data = await res.json();
+        setHistory(data.records || []);
+      } catch(e) { console.error("history fetch", e); }
+      finally { setHistoryLoading(false); }
+    })();
+  }, [tab]);
+
   const score    = result.trust_score;
   const scoreC   = score<0?T.grey:score<4?T.red:score<6.5?T.orange:T.green;
   const verdicts = result.verdicts || [];
@@ -658,10 +799,23 @@ function ReportScreen({ result, jobId, onReset, sharedView=false, shareExpiry=nu
 
         {/* Tabs */}
         <div style={{display:"flex",gap:2,borderBottom:`1px solid ${T.navyBorder}`,marginBottom:18}}>
-          {[["insights","Insights"],["claims",`Claim (${verdicts.length})`],["redflags",`Red Flags (${redFlags.length})`],["news",`News ${result.news_flags?.high_count>0?"🔴":result.news_flags?.total>0?"🟡":""}`.trim()],["people","Persone Chiave"],["legal","Stato Legale"],["sources","Fonti & Disclaimer"]].map(([id,lbl])=>(
+          {[["history","Storico"],["insights","Insights"],["claims",`Claim (${verdicts.length})`],["redflags",`Red Flags (${redFlags.length})`],["news",`News ${result.news_flags?.high_count>0?"🔴":result.news_flags?.total>0?"🟡":""}`.trim()],["people","Persone Chiave"],["legal","Stato Legale"],["sources","Fonti & Disclaimer"]].map(([id,lbl])=>(
             <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 18px",border:"none",background:"transparent",cursor:"pointer",fontSize:12,fontWeight:600,color:tab===id?T.white:T.grey,fontFamily:"'DM Sans',sans-serif",borderBottom:tab===id?`2px solid ${T.accent}`:"2px solid transparent",marginBottom:-1,transition:"all 0.15s"}}>{lbl}</button>
           ))}
         </div>
+
+        {/* Tab: Storico */}
+        {tab === "history" && (
+          <div style={{animation:"fadeUp 0.35s ease both"}}>
+            <HistoryTab
+              companyName={result.company_name}
+              vatNumber={result.vat_number||""}
+              currentScore={result.trust_score}
+              history={history}
+              loading={historyLoading}
+            />
+          </div>
+        )}
 
         {/* Tab: Insights */}
         {tab === "insights" && (
