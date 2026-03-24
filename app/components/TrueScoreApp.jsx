@@ -1,3 +1,4 @@
+'use client';
 // TrueScore Frontend v2.4 — coherence check + share link + tone analysis
 import { useState, useEffect, useRef, useCallback } from "react";
 
@@ -180,7 +181,8 @@ async function apiAnalyze({ companyName, pitchText, bilancioText, websiteUrl, se
     form.append("opencorporates_html", prefetchedData.opencorporates.html);
 
   const res = await fetch(`${API_BASE}/api/analyze`, { method:"POST", body:form });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (res.status === 429) throw new Error("Troppe analisi: hai raggiunto il limite di 5 analisi/ora. Riprova tra qualche minuto.");
+  if (!res.ok) throw new Error(`Errore API: ${res.status}`);
   return res.json();
 }
 
@@ -226,13 +228,19 @@ function Spinner() {
 
 function UploadZone({ label, hint, icon, file, onFile, accept }) {
   const [drag, setDrag] = useState(false);
+  const [sizeErr, setSizeErr] = useState(false);
+  const MAX_FILE_MB = 10;
+  const checkAndSet = (f) => {
+    if (f && f.size > MAX_FILE_MB * 1024 * 1024) { setSizeErr(true); return; }
+    setSizeErr(false); if (f) onFile(f);
+  };
   const ref = useRef();
   return (
     <div
       onClick={() => ref.current?.click()}
       onDragOver={e => { e.preventDefault(); setDrag(true); }}
       onDragLeave={() => setDrag(false)}
-      onDrop={e => { e.preventDefault(); setDrag(false); const f=e.dataTransfer.files[0]; if(f) onFile(f); }}
+      onDrop={e => { e.preventDefault(); setDrag(false); checkAndSet(e.dataTransfer.files[0]); }}
       style={{
         border:`1px solid ${drag ? T.accent : file ? T.accentDim : T.navyBorder}`,
         borderRadius:6, padding:"18px 16px", cursor:"pointer",
@@ -241,7 +249,7 @@ function UploadZone({ label, hint, icon, file, onFile, accept }) {
       }}
     >
       {drag && <ScanLine/>}
-      <input ref={ref} type="file" accept={accept} style={{display:"none"}} onChange={e=>e.target.files[0]&&onFile(e.target.files[0])}/>
+      <input ref={ref} type="file" accept={accept} style={{display:"none"}} onChange={e=>checkAndSet(e.target.files[0])}/>
       <div style={{display:"flex",alignItems:"center",gap:12}}>
         <div style={{width:36,height:36,borderRadius:6,background:file?T.accentDim:T.navyLight,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,border:`1px solid ${file?T.accent:T.navyBorder}`}}>{icon}</div>
         <div style={{flex:1}}>
@@ -250,6 +258,7 @@ function UploadZone({ label, hint, icon, file, onFile, accept }) {
         </div>
         {!file && <div style={{fontFamily:"'DM Mono',monospace",fontSize:8,color:T.grey,border:`1px solid ${T.navyBorder}`,borderRadius:4,padding:"2px 8px",letterSpacing:"0.08em",flexShrink:0}}>CARICA</div>}
       </div>
+      {sizeErr && <div style={{marginTop:6,fontFamily:"'DM Mono',monospace",fontSize:9,color:T.red}}>⚠ File troppo grande. Limite: {MAX_FILE_MB} MB</div>}
     </div>
   );
 }
@@ -1342,7 +1351,23 @@ export default function TrueScoreApp() {
         });
       }
     };
-    es.onerror = () => { es.close(); };
+    es.onerror = async () => {
+      es.close();
+      try {
+        const st = await fetch(`${API_BASE}/api/status/${job_id}`);
+        if (st.ok) {
+          const d = await st.json();
+          if (d.status === "done") {
+            const res = await apiResult(job_id);
+            setResult({...res, legal_status:res.legal_status||null, key_people:res.key_people||null, news_flags:res.news_flags||null, web_history:res.web_history||null, job_postings:res.job_postings||null, email_domain:res.email_domain||null, tech_stack:res.tech_stack||null, tone_analysis:res.tone_analysis||null, coherence_issues:res.coherence_issues||[], cross_checks:res.cross_checks||[]});
+            setScreen("report"); return;
+          } else if (d.status === "error") {
+            alert("Errore analisi: " + (d.error || "sconosciuto"));
+            setScreen("upload"); return;
+          }
+        }
+      } catch(_e) {}
+    };
   };
 
   const handleSubmit = async (payload) => {
